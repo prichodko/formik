@@ -2,7 +2,7 @@ import * as PropTypes from 'prop-types';
 import * as React from 'react';
 
 import { FormikProps } from './formik';
-import { isEmptyChildren } from './utils';
+import { isEmptyChildren, hasOneChild } from './utils';
 import warning from 'warning';
 
 export type GenericFieldHTMLAttributes =
@@ -145,14 +145,22 @@ export class Field<Props extends FieldAttributes = any> extends React.Component<
       return (children as (props: FieldProps<any>) => React.ReactNode)(bag);
     }
 
-    if (children && !isEmptyChildren(children)) {
+    if (children && hasOneChild(children)) {
       return React.Children.only(children);
     }
 
     if (typeof component === 'string') {
-      return React.createElement(component as any, { ...field, ...props });
+      return React.createElement(
+        component as any,
+        { ...field, ...props },
+        children
+      );
     }
 
-    return React.createElement(component as any, { ...bag, ...props });
+    return React.createElement(
+      component as any,
+      { ...bag, ...props },
+      children
+    );
   }
 }

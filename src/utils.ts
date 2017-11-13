@@ -32,3 +32,6 @@ export const isFunction = (obj: any) => 'function' === typeof obj;
 
 export const isEmptyChildren = (children: any) =>
   React.Children.count(children) === 0;
+
+export const hasOneChild = (children: any) =>
+  React.Children.count(children) === 1;
