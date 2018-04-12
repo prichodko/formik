@@ -161,11 +161,10 @@ export class Field<Props extends FieldAttributes = any> extends React.Component<
     } = this.props as FieldConfig;
 
     const { formik } = this.context;
+    const hasChecked = props.type === 'radio' || props.type === 'checkbox';
+
     const field = {
-      value:
-        props.type === 'radio' || props.type === 'checkbox'
-          ? props.value // React uses checked={} for these inputs
-          : getIn(formik.values, name),
+      value: getIn(formik.values, name),
       name,
       onChange: validate ? this.handleChange : formik.handleChange,
       onBlur: validate ? this.handleBlur : formik.handleBlur,
@@ -181,8 +180,12 @@ export class Field<Props extends FieldAttributes = any> extends React.Component<
     }
 
     if (typeof component === 'string') {
+      const { value, ...rest } = field;
       return React.createElement(component as any, {
-        ...field,
+        ...rest,
+        ...props.type === 'radio' || props.type === 'checkbox'
+          ? { checked: value } // React uses checked={} for these inputs
+          : { value },
         ...props,
         children,
       });
