@@ -13,53 +13,6 @@ import {
 
 import { noop } from './testHelpers';
 
-const initialValues = { name: 'jared', email: 'hello@reason.nyc' };
-type Values = typeof initialValues;
-
-function renderForm(
-  ui?: React.ReactNode,
-  props?: Partial<FormikConfig<Values>>
-) {
-  let injected: FormikProps<Values>;
-
-  return {
-    getFormProps(): FormikProps<Values> {
-      return injected;
-    },
-    ...render(
-      <Formik onSubmit={noop} initialValues={initialValues} {...props}>
-        {(formikProps: FormikProps<Values>) =>
-          (injected = formikProps) && ui ? ui : null
-        }
-      </Formik>
-    ),
-  };
-}
-
-const createRenderField = (
-  FieldComponent: React.ComponentClass<FieldConfig>
-) => (
-  props: Partial<FieldConfig> = {},
-  formProps?: Partial<FormikConfig<Values>>
-) => {
-  let injected: FieldProps | FastFieldProps;
-
-  if (!props.children && !props.render && !props.component) {
-    props.children = (fieldProps: FieldProps | FastFieldProps) =>
-      (injected = fieldProps) && null;
-  }
-
-  return {
-    getProps() {
-      return injected;
-    },
-    ...renderForm(<FieldComponent name="name" {...props} />, formProps),
-  };
-};
-
-const renderField = createRenderField(Field);
-const renderFastField = createRenderField(FastField);
-
 function cases(
   title: string,
   tester: (arg: typeof renderField | typeof renderFastField) => void
