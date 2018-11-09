@@ -226,7 +226,10 @@ export type FormikProps<Values> = FormikSharedConfig &
 
 /** Internal Formik registration methods that get passed down as props */
 export interface FormikRegistration {
-  registerField(name: string, Comp: React.Component<any>): void;
+  registerField(
+    name: string,
+    validate: ((value: any) => string | Promise<void> | undefined)
+  ): void;
   unregisterField(name: string): void;
 }
 

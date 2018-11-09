@@ -1,8 +1,8 @@
 import * as React from 'react';
-import warning from 'warning';
-import { connect } from './connect';
-import { FormikProps, GenericFieldHTMLAttributes, FormikCtx } from './types';
-import { getIn, isEmptyChildren, isFunction } from './utils';
+import { FormikProps, GenericFieldHTMLAttributes } from './types';
+
+import { FormikConsumer } from './FormikContext';
+import { getIn } from './utils';
 
 export interface FastFieldProps<V = any> {
   field: {
@@ -44,12 +44,6 @@ export interface FastFieldConfig<T> {
    */
   validate?: ((value: any) => string | Promise<void> | undefined);
 
-  /** Override FastField's default shouldComponentUpdate */
-  shouldUpdate?: (
-    nextProps: T & GenericFieldHTMLAttributes & { formik: FormikCtx<any> },
-    props: {}
-  ) => boolean;
-
   /**
    * Field name
    */
@@ -73,127 +67,27 @@ export type FastFieldAttributes<T> = GenericFieldHTMLAttributes &
  * Custom Field component for quickly hooking into Formik
  * context and wiring up forms.
  */
-class FastFieldInner<Values = {}, Props = {}> extends React.Component<
-  FastFieldAttributes<Props> & { formik: FormikCtx<Values> },
-  {}
-> {
-  constructor(
-    props: FastFieldAttributes<Props> & { formik: FormikCtx<Values> }
+
+const areEqual = (prevProps, nextProps) => {
+  if (
+    getIn(prevProps.formik.values, prevProps.name) !==
+      getIn(nextProps.formik.values, prevProps.name) ||
+    getIn(prevProps.formik.errors, prevProps.name) !==
+      getIn(nextProps.formik.errors, prevProps.name) ||
+    getIn(prevProps.formik.touched, prevProps.name) !==
+      getIn(nextProps.formik.touched, prevProps.name) ||
+    Object.keys(prevProps).length !== Object.keys(nextProps).length ||
+    prevProps.formik.isSubmitting !== nextProps.formik.isSubmitting
   ) {
-    super(props);
-    const { render, children, component } = props;
-    warning(
-      !(component && render),
-      'You should not use <FastField component> and <FastField render> in the same <FastField> component; <FastField component> will be ignored'
-    );
-
-    warning(
-      !(component && children && isFunction(children)),
-      'You should not use <FastField component> and <FastField children> as a function in the same <FastField> component; <FastField component> will be ignored.'
-    );
-
-    warning(
-      !(render && children && !isEmptyChildren(children)),
-      'You should not use <FastField render> and <FastField children> in the same <FastField> component; <FastField children> will be ignored'
-    );
+    return false;
   }
 
-  shouldComponentUpdate(
-    props: FastFieldAttributes<Props> & { formik: FormikCtx<Values> }
-  ) {
-    if (this.props.shouldUpdate) {
-      return this.props.shouldUpdate(props, this.props);
-    } else if (
-      getIn(this.props.formik.values, this.props.name) !==
-        getIn(props.formik.values, this.props.name) ||
-      getIn(this.props.formik.errors, this.props.name) !==
-        getIn(props.formik.errors, this.props.name) ||
-      getIn(this.props.formik.touched, this.props.name) !==
-        getIn(props.formik.touched, this.props.name) ||
-      Object.keys(this.props).length !== Object.keys(props).length ||
-      this.props.formik.isSubmitting !== props.formik.isSubmitting
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  }
+  return true;
+};
 
-  componentDidMount() {
-    // Register the Field with the parent Formik. Parent will cycle through
-    // registered Field's validate fns right prior to submit
-    this.props.formik.registerField(this.props.name, this);
-  }
-
-  componentDidUpdate(
-    prevProps: FastFieldAttributes<Props> & { formik: FormikCtx<Values> }
-  ) {
-    if (this.props.name !== prevProps.name) {
-      this.props.formik.unregisterField(prevProps.name);
-      this.props.formik.registerField(this.props.name, this);
-    }
-
-    if (this.props.validate !== prevProps.validate) {
-      this.props.formik.registerField(this.props.name, this);
-    }
-  }
-
-  componentWillUnmount() {
-    this.props.formik.unregisterField(this.props.name);
-  }
-
-  render() {
-    const {
-      validate,
-      name,
-      render,
-      children,
-      component = 'input',
-      formik,
-      ...props
-    } = (this.props as FastFieldAttributes<Props> & {
-      formik: FormikCtx<Values>;
-    }) as any;
-    const {
-      validate: _validate,
-      validationSchema: _validationSchema,
-      ...restOfFormik
-    } = formik;
-    const field = {
-      value:
-        props.type === 'radio' || props.type === 'checkbox'
-          ? props.value // React uses checked={} for these inputs
-          : getIn(formik.values, name),
-      name,
-      onChange: formik.handleChange,
-      onBlur: formik.handleBlur,
-    };
-    const bag = { field, form: restOfFormik };
-
-    if (render) {
-      return (render as any)(bag);
-    }
-
-    if (isFunction(children)) {
-      return (children as (props: FastFieldProps<any>) => React.ReactNode)(bag);
-    }
-
-    if (typeof component === 'string') {
-      const { innerRef, ...rest } = props;
-      return React.createElement(component as any, {
-        ref: innerRef,
-        ...field,
-        ...rest,
-        children,
-      });
-    }
-
-    return React.createElement(component as any, {
-      ...bag,
-      ...props,
-      children,
-    });
-  }
-}
-
-export const FastField = connect<FastFieldAttributes<any>, any>(FastFieldInner);
+const MemoField = React.memo(Field, areEqual);
+export const FastField = (props: FastFieldAttributes<{}>) => (
+  <FormikConsumer>
+    {formik => <MemoField formik={formik} {...props} />}
+  </FormikConsumer>
+);
